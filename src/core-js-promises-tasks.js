@@ -70,9 +70,16 @@ function getPromiseResult(source) {
  */
 function getFirstResolvedPromiseResult(promises) {
   return new Promise((resolve, reject) => {
-    Promise.race(promises)
-      .then(resolve)
-      .catch(() => reject(new Error()));
+    promises.forEach((promise) => {
+      promise
+        .then((value) => {
+          resolve(value);
+        })
+        .catch(() => {});
+    });
+    setTimeout(() => {
+      reject(new Error());
+    }, 0);
   });
 }
 
@@ -95,8 +102,8 @@ function getFirstResolvedPromiseResult(promises) {
  * [promise3, promise6, promise2] => Promise rejected with 2
  * [promise3, promise4, promise6] => Promise rejected with 6
  */
-function getFirstPromiseResult(/* promises */) {
-  throw new Error('Not implemented');
+function getFirstPromiseResult(promises) {
+  return Promise.race(promises);
 }
 
 /**
@@ -110,8 +117,8 @@ function getFirstPromiseResult(/* promises */) {
  * [Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)] => Promise fulfilled with [1, 2, 3]
  * [Promise.resolve(1), Promise.reject(2), Promise.resolve(3)] => Promise rejected with 2
  */
-function getAllOrNothing(/* promises */) {
-  throw new Error('Not implemented');
+function getAllOrNothing(promises) {
+  return Promise.all(promises);
 }
 
 /**
@@ -126,10 +133,11 @@ function getAllOrNothing(/* promises */) {
  * [Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)] => Promise fulfilled with [1, 2, 3]
  * [Promise.resolve(1), Promise.reject(2), Promise.resolve(3)]  => Promise fulfilled with [1, null, 3]
  */
-function getAllResult(/* promises */) {
-  throw new Error('Not implemented');
+function getAllResult(promises) {
+  return Promise.all(
+    promises.map((promise) => promise.then((value) => value).catch(() => null))
+  );
 }
-
 /**
  * Takes an array of promises and processes them sequentially, concatenating each resolved value into a single string.
  * The resolution order is determined by the order of the promises in the array, not by their resolution time.
@@ -148,8 +156,24 @@ function getAllResult(/* promises */) {
  * [promise1, promise4, promise3] => Promise.resolved('104030')
  * [promise1, promise4, promise3, promise2] => Promise.resolved('10403020')
  */
-function queuPromises(/* promises */) {
-  throw new Error('Not implemented');
+function queuPromises(promises) {
+  let res = '';
+  let index = 0;
+
+  function recursivePromise() {
+    if (index >= promises.length) {
+      return Promise.resolve(res);
+    }
+
+    return promises[index]
+      .then((value) => {
+        res += value;
+        index += 1;
+        return recursivePromise();
+      })
+      .catch(() => Promise.reject(new Error()));
+  }
+  return recursivePromise();
 }
 
 module.exports = {
